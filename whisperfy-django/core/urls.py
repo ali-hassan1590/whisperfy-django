@@ -18,9 +18,13 @@ urlpatterns = [
     path("api/docs/",
          SpectacularSwaggerView.as_view(url_name="schema"),
          name="swagger-ui"),
-
+    # http://127.0.0.1:8000/api/docs/
+    
+    
     # ReDoc
     path("api/redoc/",
          SpectacularRedocView.as_view(url_name="schema"),
          name="redoc"),
+
+    # http://127.0.0.1:8000/api/redoc/
 ]

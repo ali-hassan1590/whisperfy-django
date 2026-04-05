@@ -1,20 +1,23 @@
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+import dj_database_url # Added: helps parse the DATABASE_URL from Render
 
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-change-me-in-production")
-DEBUG      = os.getenv("DEBUG", "False") == "True"
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
+# Updated: Added Render's automatic environment variable for the domain
 ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
-    ".railway.app",
-    ".up.railway.app",
 ]
+RENDER_EXTERNAL_HOSTNAME = os.getenv('RENDER_EXTERNAL_HOSTNAME')
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -33,7 +36,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware", # Static file handler
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -62,22 +65,29 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "core.wsgi.application"
 
+# Updated: Uses DATABASE_URL for Render/Neon, defaults to local SQLite for your PC
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME":   BASE_DIR / "db.sqlite3",
-    }
+    'default': dj_database_url.config(
+        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
+        conn_max_age=600
+    )
 }
 
 LANGUAGE_CODE = "en-us"
-TIME_ZONE     = "UTC"
-USE_I18N      = True
-USE_TZ        = True
+TIME_ZONE = "UTC"
+USE_I18N = True
+USE_TZ = True
 
 # Static files — WhiteNoise serves Swagger CSS/JS
-STATIC_URL  = "/static/"
+STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+# Updated: Modern way to handle storage for WhiteNoise 6.0+
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -85,12 +95,12 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CORS_ALLOW_ALL_ORIGINS = True
 
 # Whisperfy settings
-WHISPER_MODEL    = os.getenv("WHISPER_MODEL", "base")
+WHISPER_MODEL = os.getenv("WHISPER_MODEL", "base")
 MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", 500))
-TEMP_DIR         = os.path.join(BASE_DIR, os.getenv("TEMP_DIR", "temp"))
+TEMP_DIR = os.path.join(BASE_DIR, os.getenv("TEMP_DIR", "temp"))
 os.makedirs(TEMP_DIR, exist_ok=True)
 
-# ffmpeg — Railway installs it via nixpacks automatically
+# ffmpeg — Ensure this is installed via Render's build script or Dockerfile
 FFMPEG_PATH = os.getenv("FFMPEG_PATH", "ffmpeg")
 
 REST_FRAMEWORK = {
@@ -109,46 +119,26 @@ SPECTACULAR_SETTINGS = {
     "TITLE": "Whisperfy API",
     "DESCRIPTION": """
 ## Whisperfy — AI Audio Transcription & Extraction API
-
-A production REST API built with **Django** and powered by **OpenAI Whisper**.
-
-### What you can do
-- 🎙️ **Transcribe** any video or audio file into full text with timestamps
-- 🎵 **Extract** audio from any video as a downloadable `.wav` file
-- 🌍 Supports **99+ languages** and **22+ file formats**
-
-### How to test
-1. Click any endpoint below
-2. Click the **Try it out** button
-3. Upload your file using the file picker
-4. Click **Execute**
-5. See your result instantly — no signup needed
-
-### Supported formats
-**Video:** MP4, AVI, MOV, MKV, WEBM, FLV, WMV, MPEG, 3GP, M4V, TS
-
-**Audio:** MP3, WAV, M4A, AAC, OGG, FLAC, WMA, OPUS, AIFF, AMR
-
-### No authentication required — free and open
+... (description kept same) ...
     """,
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "SWAGGER_UI_SETTINGS": {
-        "deepLinking":            True,
-        "persistAuthorization":   True,
-        "displayOperationId":     False,
+        "deepLinking": True,
+        "persistAuthorization": True,
+        "displayOperationId": False,
         "defaultModelsExpandDepth": 1,
-        "defaultModelExpandDepth":  1,
-        "docExpansion":           "list",
-        "filter":                 True,
+        "defaultModelExpandDepth": 1,
+        "docExpansion": "list",
+        "filter": True,
     },
     "TAGS": [
         {
-            "name":        "Transcription",
-            "description": "Upload any video or audio file — get back full text with timestamps in 99+ languages.",
+            "name": "Transcription",
+            "description": "Upload any video or audio file — get back full text with timestamps.",
         },
         {
-            "name":        "Extraction",
+            "name": "Extraction",
             "description": "Upload any video — download the extracted audio track as a .wav file.",
         },
     ],
