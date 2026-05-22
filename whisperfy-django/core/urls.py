@@ -6,7 +6,10 @@ from drf_spectacular.views import (
     SpectacularRedocView,
 )
 
+from .views import HomeView
+
 urlpatterns = [
+    path("", HomeView.as_view(), name="home"),
     path("admin/",                admin.site.urls),
     path("api/v1/extractor/",     include("extractor.urls")),
     path("api/v1/transcription/", include("transcription.urls")),

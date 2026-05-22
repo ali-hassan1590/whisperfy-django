@@ -160,3 +160,4 @@ Upload any video or audio file and download the audio as a `.wav` file.
             return Response({"error": f"Something went wrong: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         finally:
             cleanup_file(input_path)
+            
